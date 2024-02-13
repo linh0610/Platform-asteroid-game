@@ -7,12 +7,15 @@ SCREEN_WIDTH = 400
 SCREEN_HEIGHT = 600
 MAX_PLATFORM = 10
 WHITE = (255, 255, 255)
+BLACK = (0,0,0)
+RED = (255,0,100)
 GRAVITY = 1
 SCROLL_THRESH = 300
 scroll = 0
 bg_scroll = 0
 game_over = False
 score = 0
+fade_counter = 0
 
 font_small = pygame.font.SysFont('Lucida Sans', 20)
 font_big = pygame.font.SysFont('Lucida Sans', 24)
@@ -162,14 +165,20 @@ while run:
         platform_group.update(scroll)
 
     else:
-        draw_text('GAME OVER! ', font_big, WHITE, 125, 200)
-        draw_text('SCORE: ' + str(score), font_big, WHITE, 130, 250)
-        draw_text('PRESS O TO PLAY AGAIN', font_big, WHITE, 40, 300)
+        if fade_counter < SCREEN_WIDTH:
+            fade_counter += 5
+            for y in range(0, 12, 2):
+                pygame.draw.rect(screen, WHITE, (0, y * 50, fade_counter, SCREEN_HEIGHT / 12))
+                pygame.draw.rect(screen, WHITE, (SCREEN_WIDTH - fade_counter, (y+1) * 50 , SCREEN_WIDTH, SCREEN_HEIGHT / 12))
+        draw_text('GAME OVER! ', font_big, BLACK, 125, 200)
+        draw_text('SCORE: ' + str(score), font_big, BLACK, 130, 250)
+        draw_text('PRESS O TO PLAY AGAIN', font_big, BLACK, 40, 300)
         key = pygame.key.get_pressed()
         if key[pygame.K_o]:
             game_over = False
             score = 0
             scroll = 0
+            fade_counter = 0
             player.rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - 150)
             platform_group.empty()
             platform = Platform(SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT - 120, 100, platform_image)
