@@ -1,8 +1,9 @@
 import pygame
 import random
+import os
 #intialization
 pygame.init()
-#constants
+#fields
 SCREEN_WIDTH = 400
 SCREEN_HEIGHT = 600
 MAX_PLATFORM = 10
@@ -16,6 +17,12 @@ bg_scroll = 0
 game_over = False
 score = 0
 fade_counter = 0
+
+if os.path.exists('score.txt'):
+    with open ('score.txt', 'r') as file:
+        high_score = int(file.read())
+else:
+    high_score = 0
 
 font_small = pygame.font.SysFont('Lucida Sans', 20)
 font_big = pygame.font.SysFont('Lucida Sans', 24)
@@ -35,6 +42,10 @@ bg = pygame.transform.scale(bg,(400,600))
 def draw_text(text, font, text_color, x, y):
     img = font.render(text, True, text_color)
     screen.blit(img, (x,y))
+
+def draw_panel():
+    #pygame.draw.line(screen, WHITE, (0,30) , (SCREEN_WIDTH, 30), 2)
+    draw_text('SCORE '  + str(score), font_small, WHITE, 0,0 )
 
 def draw_bg(bg_scroll):
     screen.blit(bg, (0,0 + bg_scroll))
@@ -134,6 +145,7 @@ player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 150, player_image)
 platform = Platform(SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT -120, 100, platform_image)
 platform_group.add(platform)
 
+#main game
 run = True
 while run:
 
@@ -164,6 +176,11 @@ while run:
 
         platform_group.update(scroll)
 
+        if scroll > 0:
+            score += scroll
+
+        draw_panel()
+
     else:
         if fade_counter < SCREEN_WIDTH:
             fade_counter += 5
@@ -173,6 +190,10 @@ while run:
         draw_text('GAME OVER! ', font_big, BLACK, 125, 200)
         draw_text('SCORE: ' + str(score), font_big, BLACK, 130, 250)
         draw_text('PRESS O TO PLAY AGAIN', font_big, BLACK, 40, 300)
+        if score > high_score:
+            high_score = score
+            with open('score.txt', 'w') as file:
+                file.write(str(high_score))
         key = pygame.key.get_pressed()
         if key[pygame.K_o]:
             game_over = False
