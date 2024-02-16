@@ -1,4 +1,6 @@
-import pygame
+import math
+
+import pygame, sys
 import random
 import os
 from extramodule import SpriteSheet
@@ -52,12 +54,43 @@ death_fx = pygame.mixer.Sound('asset/death_fx.mp3')
 death_fx.set_volume(0.5)
 
 #load image
-player_image = pygame.image.load("asset/idle1.png").convert_alpha()
+idle1_image = pygame.image.load("asset/idle1.png").convert_alpha()
+idle1_image = pygame.transform.scale(idle1_image, (20, 45))
+idle2_image = pygame.image.load("asset/idle2.png").convert_alpha()
+idle2_image = pygame.transform.scale(idle2_image, (20, 45))
+idle3_image = pygame.image.load("asset/idle3.png").convert_alpha()
+idle3_image = pygame.transform.scale(idle3_image, (20, 45))
+idle4_image = pygame.image.load("asset/idle4.png").convert_alpha()
+idle4_image = pygame.transform.scale(idle4_image, (20, 45))
 run_image = pygame.image.load('asset/Run_animation.png').convert_alpha()
 run_image = pygame.transform.scale(run_image, (40, 45))
-jump_image = pygame.image.load("asset/Jump_1.png")
-jump_image = pygame.transform.scale(jump_image, (40,45))
-bg = pygame.image.load("asset/bg.jpg").convert_alpha()
+
+
+jump1_image = pygame.image.load("asset/Jump_1.png")
+jump1_image = pygame.transform.scale(jump1_image, (40,45))
+jump2_image = pygame.image.load("asset/Jump_1.png")
+jump2_image = pygame.transform.scale(jump2_image, (40,45))
+jump3_image = pygame.image.load("asset/Jump_1.png")
+jump3_image = pygame.transform.scale(jump3_image, (40,45))
+jump4_image = pygame.image.load("asset/Jump_1.png")
+jump4_image = pygame.transform.scale(jump4_image, (40,45))
+jump5_image = pygame.image.load("asset/Jump_1.png")
+jump5_image = pygame.transform.scale(jump5_image, (30,45))
+jump6_image = pygame.image.load("asset/Jump_1.png")
+jump6_image = pygame.transform.scale(jump6_image, (30,45))
+jump7_image = pygame.image.load("asset/Jump_1.png")
+jump7_image = pygame.transform.scale(jump7_image, (30,45))
+jump8_image = pygame.image.load("asset/Jump_1.png")
+jump8_image = pygame.transform.scale(jump8_image, (40,45))
+jump9_image = pygame.image.load("asset/Jump_1.png")
+jump9_image = pygame.transform.scale(jump9_image, (40,45))
+jump10_image = pygame.image.load("asset/Jump_1.png")
+jump10_image = pygame.transform.scale(jump10_image, (40,45))
+jump11_image = pygame.image.load("asset/Jump_1.png")
+jump11_image = pygame.transform.scale(jump11_image, (40,45))
+
+
+bg = pygame.image.load("asset/bg.png").convert_alpha()
 platform_image = pygame.image.load("asset/pad.png").convert_alpha()
 bg = pygame.transform.scale(bg,(400,600))
 asteroid = pygame.image.load("asset/asteroid1.png")
@@ -77,11 +110,30 @@ def draw_bg(bg_scroll):
 
 
 #Player class
-class Player:
+class Player(pygame.sprite.Sprite):
 
     def __init__(self, x, y, player_image):
 
-        self.image = pygame.transform.scale(player_image, (20, 45))
+        self.idle = []
+        self.idle.append(idle1_image)
+        self.idle.append(idle2_image)
+        self.idle.append(idle3_image)
+        self.idle.append(idle4_image)
+        self.jumping = []
+        self.jumping.append(jump1_image)
+        self.jumping.append(jump2_image)
+        self.jumping.append(jump3_image)
+        self.jumping.append(jump4_image)
+        self.jumping.append(jump5_image)
+        self.jumping.append(jump6_image)
+        self.jumping.append(jump7_image)
+        self.jumping.append(jump8_image)
+        self.jumping.append(jump9_image)
+        self.jumping.append(jump10_image)
+        self.jumping.append(jump11_image)
+        self.current_sprite = 0
+        self.current_jumping_sprite = 0
+        self.image = self.idle[self.current_sprite]
         self.width = 15
         self.height = 45
         self.rect = pygame.Rect(0, 0, self.width, self.height)
@@ -90,6 +142,7 @@ class Player:
         self.vel_x = 0
         self.flip = False
         self.on_ground = False
+        self.moving = False
 
     def jump(self):
         if self.on_ground:  # Only jump if player is on the ground
@@ -102,26 +155,25 @@ class Player:
         dx = 0
         dy = 0
         scroll = 0
-
         key = pygame.key.get_pressed()
 
         if key[pygame.K_a]:
 
             dx -= 8
+            self.image = run_image
             self.flip = True
-
-
+            self.moving = True
 
         if key[pygame.K_d]:
 
             dx += 8
+            self.image = run_image
             self.flip = False
-
+            self.moving = True
 
 
         if key[pygame.K_SPACE]:
             self.jump()
-            self.image = jump_image
 
 
 
@@ -134,6 +186,9 @@ class Player:
         if self.rect.right + dx > SCREEN_WIDTH:
             dx = SCREEN_WIDTH - self.rect.right
 
+        if self.vel_x != 0 and self.on_ground and dx != 0:
+            self.image = run_image
+
 
         for platform in platform_group:
             if platform.rect.colliderect(self.rect.x, self.rect.y + dy, self.width, self.height):
@@ -144,6 +199,8 @@ class Player:
                         #self.vel_y = -16
                         self.vel_y = 0
                         self.on_ground = True
+                        if platform.moving:
+                            self.vel_x  += platform.speed
 
         if self.rect.top <= SCROLL_THRESH:
             if self.vel_y < 0:
@@ -155,18 +212,37 @@ class Player:
         return scroll
 
     def draw(self, screen):
-        if self.vel_x == 0 and self.vel_y == 0:
-            self.image = pygame.transform.scale(player_image, (20, 45))
-            screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
-        elif self.vel_x != 0 and self.vel_y == 0 and key[pygame.K_a] and key[pygame.K_d]:
-            self.image = run_image
-            screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
-        elif self.vel_y != 0:
-            self.image = jump_image
-            screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
+       # if self.vel_x != 0 or self.vel_y != 0:
+            #self.image = run_image
+            #screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
+
+
+       # elif self.vel_y != 0:
+        #    self.image = jump_image
+            #screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
+      #  else:
+       #     self.image = pygame.transform.scale(player_image, (20, 45))
+        screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
+
 
 
         #pygame.draw.rect(screen,BLACK, self.rect, 1)
+    def update(self):
+        self.current_sprite += 0.03
+        self.current_jumping_sprite += 0.05
+        key = pygame.key.get_pressed()
+
+        if self.current_sprite >= len(self.idle):
+            self.current_sprite = 0
+        if self.current_jumping_sprite >= len(self.idle):
+            self.current_jumping_sprite = 0
+        # Additional logic for updating the player's state
+        if key[pygame.K_a] or key[pygame.K_d]:
+            self.image = run_image
+        elif self.vel_y != 0 and key[pygame.K_SPACE]:
+            self.image = self.jumping[math.floor(self.current_jumping_sprite)]
+        else:
+            self.image = self.idle[math.floor(self.current_sprite)]
 
 
 #class to create platform
@@ -206,7 +282,7 @@ class Platform(pygame.sprite.Sprite):
 platform_group = pygame.sprite.Group()
 asteroid_group = pygame.sprite.Group()
 
-player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 150, player_image)
+player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 150, idle1_image)
 
 platform = Platform(SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT -120, 100, platform_image, False)
 platform_group.add(platform)
@@ -228,6 +304,7 @@ while run:
 
         platform_group.draw(screen)
         asteroid_group.draw(screen)
+        player.update()
         player.draw(screen)
 
 #death scenario
