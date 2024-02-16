@@ -1,12 +1,15 @@
 import pygame
 import random
 import os
+from extramodule import SpriteSheet
+from Enemy import Enemy
 #intialization
 pygame.init()
 #fields
 SCREEN_WIDTH = 400
 SCREEN_HEIGHT = 600
 MAX_PLATFORM = 10
+MAX_ENEMY = 5
 WHITE = (255, 255, 255)
 BLACK = (0,0,0)
 RED = (255,0,100)
@@ -17,6 +20,7 @@ bg_scroll = 0
 game_over = False
 score = 0
 fade_counter = 0
+
 
 if os.path.exists('score.txt'):
     with open ('score.txt', 'r') as file:
@@ -38,7 +42,9 @@ player_image = pygame.image.load("asset/idle1.png").convert_alpha()
 bg = pygame.image.load("asset/bg.jpg").convert_alpha()
 platform_image = pygame.image.load("asset/pad.png").convert_alpha()
 bg = pygame.transform.scale(bg,(400,600))
-
+asteroid = pygame.image.load("asset/asteroid1.png")
+asteroid = pygame.transform.scale(asteroid,(10,10))
+asteroid_sheet = SpriteSheet(asteroid)
 def draw_text(text, font, text_color, x, y):
     img = font.render(text, True, text_color)
     screen.blit(img, (x,y))
@@ -82,10 +88,10 @@ class Player:
         key = pygame.key.get_pressed()
 
         if key[pygame.K_a]:
-            dx -= 10
+            dx -= 8
             self.flip = True
         if key[pygame.K_d]:
-            dx += 10
+            dx += 8
             self.flip = False
 
         if key[pygame.K_SPACE]:
@@ -134,11 +140,11 @@ class Platform(pygame.sprite.Sprite):
         self.direction = random.choice([-1, 1])
         self.speed = random.randint(1,2)
         if score > 1500:
-            self.speed = random.randint(1, 4)
+            self.speed = random.randint(1, 3)
         elif score > 5000:
-            self.speed = random.randint(2, 5)
+            self.speed = random.randint(4, 5)
         elif score > 10000:
-            self.speed = random.randint(3, 6)
+            self.speed = random.randint(5, 6)
 
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -159,6 +165,8 @@ class Platform(pygame.sprite.Sprite):
             self.kill()
 
 platform_group = pygame.sprite.Group()
+asteroid_group = pygame.sprite.Group()
+
 player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 150, player_image)
 
 platform = Platform(SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT -120, 100, platform_image, False)
@@ -178,7 +186,9 @@ while run:
         draw_bg(bg_scroll)
 
         platform_group.draw(screen)
+        asteroid_group.draw(screen)
         player.draw(screen)
+
 
         if player.rect.top > SCREEN_HEIGHT:
             game_over = True
@@ -199,6 +209,12 @@ while run:
 
 
         platform_group.update(scroll)
+
+        if len(asteroid_group) < MAX_ENEMY:
+            asteroid = Enemy(SCREEN_WIDTH, 10, asteroid_sheet, 3, score)
+            asteroid_group.add(asteroid)
+
+        asteroid_group.update(scroll, SCREEN_HEIGHT)
 
         if scroll > 0:
             score += scroll
