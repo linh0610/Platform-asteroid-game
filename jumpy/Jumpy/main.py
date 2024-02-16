@@ -2,8 +2,10 @@ import pygame
 import random
 import os
 from extramodule import SpriteSheet
+from pygame import mixer
 from Enemy import Enemy
 #intialization
+mixer.init()
 pygame.init()
 #fields
 SCREEN_WIDTH = 400
@@ -32,13 +34,29 @@ font_small = pygame.font.SysFont('Lucida Sans', 20)
 font_big = pygame.font.SysFont('Lucida Sans', 24)
 #game window
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("jumping bullet hell")
+pygame.display.set_caption("platform jumping with asteroid falling")
 
+#set game tick
 clock = pygame.time.Clock()
 FPS = 60
 
+#load music
+pygame.mixer.music.load('asset/bgmusic.mp3')
+pygame.mixer.music.set_volume(0.7)
+pygame.mixer.music.play(-1, 0.0)
+
+jump_fx = pygame.mixer.Sound('asset/jump_fx.mp3')
+jump_fx.set_volume(0.5)
+
+death_fx = pygame.mixer.Sound('asset/death_fx.mp3')
+death_fx.set_volume(0.5)
+
 #load image
 player_image = pygame.image.load("asset/idle1.png").convert_alpha()
+run_image = pygame.image.load('asset/Run_animation.png').convert_alpha()
+run_image = pygame.transform.scale(run_image, (40, 45))
+jump_image = pygame.image.load("asset/Jump_1.png")
+jump_image = pygame.transform.scale(jump_image, (40,45))
 bg = pygame.image.load("asset/bg.jpg").convert_alpha()
 platform_image = pygame.image.load("asset/pad.png").convert_alpha()
 bg = pygame.transform.scale(bg,(400,600))
@@ -58,8 +76,7 @@ def draw_bg(bg_scroll):
     screen.blit(bg, (0, -600 + bg_scroll))
 
 
-
-
+#Player class
 class Player:
 
     def __init__(self, x, y, player_image):
@@ -78,6 +95,7 @@ class Player:
         if self.on_ground:  # Only jump if player is on the ground
             self.vel_y = -18  # Set the vertical velocity to make the player jump
             self.on_ground = False  # Update the on_ground flag
+            jump_fx.play()
 
     def move(self):
 
@@ -88,14 +106,23 @@ class Player:
         key = pygame.key.get_pressed()
 
         if key[pygame.K_a]:
+
             dx -= 8
             self.flip = True
+
+
+
         if key[pygame.K_d]:
+
             dx += 8
             self.flip = False
 
+
+
         if key[pygame.K_SPACE]:
             self.jump()
+            self.image = jump_image
+
 
 
         self.vel_y += GRAVITY
@@ -128,9 +155,21 @@ class Player:
         return scroll
 
     def draw(self, screen):
-        screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
-        pygame.draw.rect(screen,BLACK, self.rect, 1)
+        if self.vel_x == 0 and self.vel_y == 0:
+            self.image = pygame.transform.scale(player_image, (20, 45))
+            screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
+        elif self.vel_x != 0 and self.vel_y == 0 and key[pygame.K_a] and key[pygame.K_d]:
+            self.image = run_image
+            screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
+        elif self.vel_y != 0:
+            self.image = jump_image
+            screen.blit(pygame.transform.flip(self.image, self.flip, False), self.rect)
 
+
+        #pygame.draw.rect(screen,BLACK, self.rect, 1)
+
+
+#class to create platform
 class Platform(pygame.sprite.Sprite):
     def __init__(self, x, y, width, platform_image, moving):
         pygame.sprite.Sprite.__init__(self)
@@ -172,7 +211,9 @@ player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 150, player_image)
 platform = Platform(SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT -120, 100, platform_image, False)
 platform_group.add(platform)
 
-#main game
+
+
+#main game loop
 run = True
 while run:
 
@@ -189,9 +230,15 @@ while run:
         asteroid_group.draw(screen)
         player.draw(screen)
 
-
+#death scenario
         if player.rect.top > SCREEN_HEIGHT:
             game_over = True
+            death_fx.play()
+        if pygame.sprite.spritecollide(player, asteroid_group, False):
+            if pygame.sprite.spritecollide(player, asteroid_group, False, pygame.sprite.collide_mask):
+                game_over = True
+                death_fx.play()
+
 #    pygame.draw.line(screen, WHITE, (0, SCROLL_THRESH), (SCREEN_WIDTH, SCROLL_THRESH))
 
         if len(platform_group) < MAX_PLATFORM:
@@ -222,7 +269,7 @@ while run:
         pygame.draw.line(screen, WHITE, (0,score - high_score + SCROLL_THRESH), (SCREEN_WIDTH, score - high_score + SCROLL_THRESH), 3)
         draw_text('HIGH_SCORE', font_small, WHITE, SCREEN_WIDTH -130, score - high_score + SCROLL_THRESH)
         draw_panel()
-
+#game over
     else:
         if fade_counter < SCREEN_WIDTH:
             fade_counter += 5
@@ -230,6 +277,7 @@ while run:
                 pygame.draw.rect(screen, WHITE, (0, y * 50, fade_counter, SCREEN_HEIGHT / 12))
                 pygame.draw.rect(screen, WHITE, (SCREEN_WIDTH - fade_counter, (y+1) * 50 , SCREEN_WIDTH, SCREEN_HEIGHT / 12))
         else:
+
             draw_text('GAME OVER! ', font_big, BLACK, 125, 200)
             draw_text('SCORE: ' + str(score), font_big, BLACK, 130, 250)
             draw_text('PRESS O TO PLAY AGAIN', font_big, BLACK, 40, 300)
@@ -244,10 +292,11 @@ while run:
                 scroll = 0
                 fade_counter = 0
                 player.rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - 150)
+                asteroid_group.empty()
                 platform_group.empty()
                 platform = Platform(SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT - 120, 100, platform_image, False)
                 platform_group.add(platform)
-
+#Quit game
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             if score > high_score:
